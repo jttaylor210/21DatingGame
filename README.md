@@ -21,6 +21,12 @@ To add a new set, append the questions to the end of each tier's list and add th
 - copy `index.html` over `404.html` (they are the same file), and
 - bump `VERSION` in `sw.js` so phones that installed the app pick the change up on their next open.
 
+## Passing and history
+
+A pass ends the turn: no points, the round counts, and play moves to the other player. Each player gets two.
+
+*History*, at the bottom of the turn screen and on the final score, lists every round of the current game, latest first: who answered, the stakes, the question, the ruling and the points. It is saved with the game, so it survives a refresh and is cleared when a new game is dealt.
+
 ## The deck log
 
 Each phone remembers which cards it has dealt and how they were ruled, so a new game deals the cards that phone hasn't seen first. To read the log, tap the "21" in the title three times, or open the site with `#log` on the end of the address. It lists every played card with how often it was drawn, ruled real, called, or passed, most-called first. It is stored on the phone only.

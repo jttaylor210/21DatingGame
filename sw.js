@@ -1,5 +1,5 @@
 /* No-Bullshit 21 service worker */
-var VERSION = "2026-11-13b";
+var VERSION = "2026-11-14a";
 var SHELL = "nb21-shell-" + VERSION;
 var FONTS = "nb21-fonts";
 var PRECACHE = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png", "./apple-touch-icon.png", "./favicon-32.png"];

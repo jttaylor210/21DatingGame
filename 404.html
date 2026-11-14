@@ -55,6 +55,9 @@ button{font:inherit;color:inherit}
 .app{height:100%;max-width:480px;margin:0 auto;display:flex;flex-direction:column}
 .screen{flex:1;min-height:0;display:flex;flex-direction:column;gap:14px}
 #screen-start,#screen-end,#screen-log{overflow:auto;padding-bottom:12px}
+#screen-history{padding-bottom:12px}
+#screen-history .log{flex:1;min-height:0;overflow:auto}
+#screen-history .btn{flex-shrink:0}
 
 /* type */
 .eyebrow{margin:0;font-family:var(--font-ui);font-weight:600;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
@@ -160,7 +163,10 @@ h2{margin:0;font-family:var(--font-ui);font-weight:700;font-size:18px;letter-spa
 /* actions */
 .actions{display:flex;flex-direction:column;gap:10px;padding-top:10px;margin-top:auto}
 .group{display:flex;flex-direction:column;gap:10px}
-.minor{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.minor{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px}
+.minor > :first-child{justify-self:start}
+.minor > :last-child{justify-self:end}
+.minor > :nth-child(2){justify-self:center;grid-column:2}
 .link{background:none;border:0;padding:10px 0;cursor:pointer;font-family:var(--font-ui);font-weight:600;font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
 .link.warn{color:var(--bs)}
 
@@ -186,6 +192,13 @@ h2{margin:0;font-family:var(--font-ui);font-weight:700;font-size:18px;letter-spa
 .log-row p{margin:0;font-family:var(--font-q);font-style:italic;font-size:17px;line-height:1.3}
 .log-row small{display:block;margin-top:3px;color:var(--muted);font-size:13px}
 .log-row small b{color:var(--bs);font-weight:600}
+
+/* this game's history */
+.hist{border-top:1px solid var(--line);padding-top:12px}
+.hist.t1{--tc:var(--t1)} .hist.t2{--tc:var(--t2)} .hist.t3{--tc:var(--t3)}
+.hist-head{display:block;margin-bottom:5px;font-family:var(--font-ui);font-weight:700;font-size:14px;letter-spacing:.1em;text-transform:uppercase;color:var(--tc,var(--muted))}
+.hist small b{color:var(--real)}
+.hist.now{border:1px dashed var(--line);border-radius:12px;padding:12px}
 
 @media (prefers-reduced-motion:reduce){
   *{animation:none!important;transition:none!important}
@@ -225,7 +238,7 @@ h2{margin:0;font-family:var(--font-ui);font-weight:700;font-size:18px;letter-spa
         <li>Answer out loud. The phone is the deck and the scoreboard. Nothing else goes through it.</li>
         <li>The asker rules: <em>Real</em>, or <em>Bullshit</em>. Bullshit doesn't mean "you're lying." It means "that was the brochure answer. Give me the real one."</li>
         <li>Called? Go again. Come clean and you still get full points. Stay slippery and you get nothing, and the asker gets one.</li>
-        <li>Two passes each. No explanation owed. The pass is an answer too.</li>
+        <li>Two passes each. No explanation owed. A pass ends your turn with no points, and the pass is an answer too.</li>
         <li>The asker's ruling is final. You're judging each other all night, so rule the way you'd want to be ruled.</li>
       </ol>
     </details>
@@ -270,10 +283,20 @@ h2{margin:0;font-family:var(--font-ui);font-weight:700;font-size:18px;letter-spa
       <button class="btn ghost" id="btnPass" hidden>Pass <small id="passLeft">2 left</small></button>
       <div class="minor">
         <button class="link" id="btnUndo" hidden>Undo</button>
-        <span></span>
+        <button class="link" id="btnHistory">History</button>
         <button class="link" id="btnQuit">Quit</button>
       </div>
     </footer>
+  </section>
+
+  <section id="screen-history" class="screen" hidden>
+    <header class="brand">
+      <p class="eyebrow">This game</p>
+      <h1>History</h1>
+      <p class="tagline" id="histSummary"></p>
+    </header>
+    <div id="histBody" class="log"></div>
+    <button class="btn primary" id="btnHistBack">Back to the game</button>
   </section>
 
   <section id="screen-log" class="screen" hidden>
@@ -285,7 +308,7 @@ h2{margin:0;font-family:var(--font-ui);font-weight:700;font-size:18px;letter-spa
     <div id="logBody" class="log"></div>
     <p class="note">Most-called cards are listed first. Nothing here leaves this phone.</p>
     <button class="btn primary" id="btnLogBack">Back to the game</button>
-    <div class="minor"><span></span><button class="link" id="btnClearLog">Clear log</button></div>
+    <div class="minor"><span></span><span></span><button class="link" id="btnClearLog">Clear log</button></div>
   </section>
 
   <section id="screen-end" class="screen" hidden>
@@ -300,6 +323,7 @@ h2{margin:0;font-family:var(--font-ui);font-weight:700;font-size:18px;letter-spa
       <p class="q">What did you learn about me tonight that you didn't expect?</p>
     </div>
     <button class="btn primary" id="btnAgain">Play again</button>
+    <div class="minor"><span></span><button class="link" id="btnHistoryEnd">History</button><span></span></div>
   </section>
 
 </div>
@@ -427,6 +451,7 @@ h2{margin:0;font-family:var(--font-ui);font-weight:700;font-size:18px;letter-spa
   var KEY = "nb21-state-v1";
   var LOGKEY = "nb21-log-v1";
   var clearArmed = null;
+  var showHistory = false;
   var state = null;
   var quitArmed = null;
 
@@ -457,7 +482,7 @@ h2{margin:0;font-family:var(--font-ui);font-weight:700;font-size:18px;letter-spa
     return {
       screen:"turn", names:names, total:total, round:1,
       answerer: Math.random()<0.5 ? 0 : 1,
-      phase:"pick", tier:null, q:null,
+      phase:"pick", tier:null, q:null, history:[],
       decks:{1:orderDeck(1), 2:orderDeck(2), 3:orderDeck(3)},
       players:[mkPlayer(), mkPlayer()],
       prev:null
@@ -493,18 +518,17 @@ h2{margin:0;font-family:var(--font-ui);font-weight:700;font-size:18px;letter-spa
   }
   function rule(kind){
     var a = state.players[state.answerer], k = state.players[1-state.answerer], t = state.tier;
+    if(kind==="pass" && a.passes<=0) return;
     snapshotPrev();
     if(kind==="bs"){ state.phase="called"; render(); return; }
-    var text = BANK[t][state.q];
+    var text = BANK[t][state.q], pts = 0, askerPts = 0;
     logBump(text, kind, 1);
     state.prev.undoLog = {text:text, field:kind};
-    if(kind==="pass"){
-      if(a.passes<=0) return;
-      a.passes--; a.passed++;
-      state.phase="pick"; state.tier=null; state.q=null; render(); return;
-    }
-    if(kind==="real" || kind==="clean"){ a.pts += t; a.tiers[t-1]++; if(kind==="clean") a.cleaned++; }
-    if(kind==="still"){ a.tiers[t-1]++; a.stuck++; k.pts += 1; }
+    if(kind==="pass"){ a.passes--; a.passed++; }
+    if(kind==="real" || kind==="clean"){ pts = t; a.pts += t; a.tiers[t-1]++; if(kind==="clean") a.cleaned++; }
+    if(kind==="still"){ askerPts = 1; a.tiers[t-1]++; a.stuck++; k.pts += 1; }
+    if(!state.history) state.history = [];
+    state.history.push({round:state.round, answerer:state.answerer, tier:t, q:text, result:kind, pts:pts, askerPts:askerPts});
     nextRound();
   }
   function nextRound(){
@@ -524,7 +548,11 @@ h2{margin:0;font-family:var(--font-ui);font-weight:700;font-size:18px;letter-spa
   /* render */
   function render(){
     var screen = state ? state.screen : "start";
+    if(!state) showHistory = false;
+    if(showHistory) screen = "history";
     if(location.hash==="#log") screen = "log";
+    $("#screen-history").hidden = screen!=="history";
+    if(screen==="history") renderHistory();
     $("#screen-log").hidden = screen!=="log";
     if(screen==="log") renderLog();
     $("#screen-start").hidden = screen!=="start";
@@ -576,6 +604,29 @@ h2{margin:0;font-family:var(--font-ui);font-weight:700;font-size:18px;letter-spa
     var q = $("#btnQuit");
     q.textContent = quitArmed ? "Tap again to quit" : "Quit";
     q.classList.toggle("warn", !!quitArmed);
+  }
+  var RESULT = {real:"Real", clean:"Called, then came clean", still:"Called, stayed slippery", pass:"Passed"};
+  function renderHistory(){
+    var n = state.names, H = state.history || [], html = "";
+    var over = state.screen==="end";
+    $("#histSummary").textContent = H.length
+      ? (over ? "All "+H.length+" rounds, latest first." : H.length+" played so far, latest first.")
+      : "Nothing ruled yet.";
+    if(!over && state.phase!=="pick"){
+      html += '<div class="log-row hist now t'+state.tier+'"><span class="hist-head">Round '+state.round+' · '+esc(n[state.answerer])+' is answering · '+TIER_NAME[state.tier]+'</span>'
+        + '<p>'+esc(BANK[state.tier][state.q])+'</p><small>'+(state.phase==="called" ? "Called. Waiting on the second answer." : "Waiting on the ruling.")+'</small></div>';
+    } else if(!over){
+      html += '<div class="log-row hist now"><span class="hist-head">Round '+state.round+' · '+esc(n[state.answerer])+' answers next</span><small>Stakes not picked yet.</small></div>';
+    }
+    for(var i=H.length-1;i>=0;i--){
+      var h = H[i], bits = [RESULT[h.result] || h.result];
+      bits.push(h.pts ? '<b>+'+h.pts+' '+esc(n[h.answerer])+'</b>' : 'no points for '+esc(n[h.answerer]));
+      if(h.askerPts) bits.push('<b>+'+h.askerPts+' '+esc(n[1-h.answerer])+'</b>');
+      html += '<div class="log-row hist t'+h.tier+'"><span class="hist-head">Round '+h.round+' · '+esc(n[h.answerer])+' answered · '+TIER_NAME[h.tier]+'</span>'
+        + '<p>'+esc(h.q)+'</p><small>'+bits.join(' · ')+'</small></div>';
+    }
+    $("#histBody").innerHTML = html;
+    $("#btnHistBack").textContent = over ? "Back to the final score" : "Back to the game";
   }
   function renderLog(){
     var L = logGet(), html = "", played = 0, total = 0;
@@ -654,6 +705,9 @@ h2{margin:0;font-family:var(--font-ui);font-weight:700;font-size:18px;letter-spa
       render();
     });
     window.addEventListener("hashchange", render);
+    $("#btnHistory").addEventListener("click", function(){ showHistory = true; render(); $("#histBody").scrollTop = 0; });
+    $("#btnHistoryEnd").addEventListener("click", function(){ showHistory = true; render(); $("#histBody").scrollTop = 0; });
+    $("#btnHistBack").addEventListener("click", function(){ showHistory = false; render(); });
     $("#btnLogBack").addEventListener("click", function(){
       history.replaceState(null, "", location.pathname + location.search); render();
     });
