@@ -4,21 +4,19 @@ Twenty-one questions. You pick how deep you go. They decide whether to believe y
 
 One phone, face-up on the table. The phone is only the deck and the scoreboard.
 
-## Run it
+**Play:** https://jttaylor210.github.io/21DatingGame/
 
-It is one static page. Open `index.html`, or serve the folder with anything.
+## How it's hosted
 
-Live: https://21.iamjttaylor.com
+GitHub Pages serves the `gh-pages` branch of this repo. It is one static page: `index.html`, a manifest, a service worker and icons. No build step. Push to `gh-pages` and the site updates in about a minute.
 
-## Deploy (GitHub Pages)
+## Move it to 21.iamjttaylor.com
 
-1. Push this folder to a public repo on the `main` branch.
-2. Settings → Pages → Source: *Deploy from a branch*, branch `main`, folder `/ (root)`.
-   The `CNAME` file sets the custom domain to `21.iamjttaylor.com` automatically.
-3. DNS: add a `CNAME` record for host `21` pointing to `<your-github-username>.github.io`.
-4. Once the certificate is issued (minutes to an hour), tick *Enforce HTTPS* on the Pages settings page.
+1. DNS, wherever iamjttaylor.com is managed: add a `CNAME` record, host `21`, value `jttaylor210.github.io`.
+2. This repo → Settings → Pages → Custom domain: `21.iamjttaylor.com` → Save.
+3. When the certificate is issued (minutes to an hour), tick *Enforce HTTPS* on the same page.
 
-To use a different subdomain, change the one line in `CNAME` and the DNS record to match.
+Do step 1 first. Setting the custom domain before the DNS record exists takes the site offline until it does.
 
 ## Edit the deck
 
