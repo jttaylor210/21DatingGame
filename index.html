@@ -54,7 +54,7 @@ button{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--t3);outline-offset:3px}
 .app{height:100%;max-width:480px;margin:0 auto;display:flex;flex-direction:column}
 .screen{flex:1;min-height:0;display:flex;flex-direction:column;gap:14px}
-#screen-start,#screen-end{overflow:auto;padding-bottom:12px}
+#screen-start,#screen-end,#screen-log{overflow:auto;padding-bottom:12px}
 
 /* type */
 .eyebrow{margin:0;font-family:var(--font-ui);font-weight:600;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
@@ -177,6 +177,16 @@ h2{margin:0;font-family:var(--font-ui);font-weight:700;font-size:18px;letter-spa
 .note{margin:0;color:var(--muted);font-size:14px;max-width:40ch}
 .card.last{--tc:var(--t3)}
 
+/* deck log */
+.log{display:flex;flex-direction:column;gap:18px}
+.log-tier{border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:10px}
+.log-tier.t1{--tc:var(--t1)} .log-tier.t2{--tc:var(--t2)} .log-tier.t3{--tc:var(--t3)}
+.log-tier h2{color:var(--tc);display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.log-tier h2 span{font-size:13px;font-weight:600;color:var(--muted);letter-spacing:.1em}
+.log-row p{margin:0;font-family:var(--font-q);font-style:italic;font-size:17px;line-height:1.3}
+.log-row small{display:block;margin-top:3px;color:var(--muted);font-size:13px}
+.log-row small b{color:var(--bs);font-weight:600}
+
 @media (prefers-reduced-motion:reduce){
   *{animation:none!important;transition:none!important}
 }
@@ -188,7 +198,7 @@ h2{margin:0;font-family:var(--font-ui);font-weight:700;font-size:18px;letter-spa
   <section id="screen-start" class="screen">
     <header class="brand">
       <p class="eyebrow">A game for two people</p>
-      <h1>No-Bullshit <span class="num">21</span></h1>
+      <h1>No-Bullshit <span class="num" id="logDoor">21</span></h1>
       <p class="tagline">Twenty-one questions. You pick how deep you go. They decide whether to believe you.</p>
     </header>
 
@@ -266,6 +276,18 @@ h2{margin:0;font-family:var(--font-ui);font-weight:700;font-size:18px;letter-spa
     </footer>
   </section>
 
+  <section id="screen-log" class="screen" hidden>
+    <header class="brand">
+      <p class="eyebrow">Deck log · this phone only</p>
+      <h1>The tape</h1>
+      <p class="tagline" id="logSummary"></p>
+    </header>
+    <div id="logBody" class="log"></div>
+    <p class="note">Most-called cards are listed first. Nothing here leaves this phone.</p>
+    <button class="btn primary" id="btnLogBack">Back to the game</button>
+    <div class="minor"><span></span><button class="link" id="btnClearLog">Clear log</button></div>
+  </section>
+
   <section id="screen-end" class="screen" hidden>
     <header class="brand">
       <p class="eyebrow">Final</p>
@@ -301,7 +323,13 @@ h2{margin:0;font-family:var(--font-ui);font-weight:700;font-size:18px;letter-spa
       "What's the last thing that made you laugh until it hurt?",
       "What's the most recent thing you got unreasonably excited about?",
       "What's a habit of yours that other people find strange?",
-      "What's your go-to move when a conversation gets boring?"
+      "What's your go-to move when a conversation gets boring?",
+      "What's your most confidently held opinion about something that doesn't matter at all?",
+      "What's the most embarrassing song you know every word to? Prove it.",
+      "What did you search for recently that you'd rather not explain?",
+      "What would your friends say you're insufferable about?",
+      "What's the dumbest way you've ever hurt yourself?",
+      "What are you terrible at but keep doing with total confidence?"
     ],
     2: [
       "What's something people assume about you that's wrong, and why do you let them?",
@@ -318,7 +346,12 @@ h2{margin:0;font-family:var(--font-ui);font-weight:700;font-size:18px;letter-spa
       "What do you miss that you're supposed to be over?",
       "When did you last feel out of your depth?",
       "What's a decision you made for someone else's approval?",
-      "What's something you're good at that you wish you didn't have to be?"
+      "What's something you're good at that you wish you didn't have to be?",
+      "What's the pettiest reason you've ever lost interest in someone?",
+      "What did you rehearse saying before tonight?",
+      "What have you pretended to be into for someone you liked?",
+      "What's the most embarrassing thing you've done to impress someone? Did it work?",
+      "What's a grudge you're still holding that you know is ridiculous?"
     ],
     3: [
       "What's the pattern in your past relationships that's actually about you?",
@@ -340,6 +373,8 @@ h2{margin:0;font-family:var(--font-ui);font-weight:700;font-size:18px;letter-spa
   };
   var TIER_NAME = {1:"Surface",2:"Under",3:"Core"};
   var KEY = "nb21-state-v1";
+  var LOGKEY = "nb21-log-v1";
+  var clearArmed = null;
   var state = null;
   var quitArmed = null;
 
@@ -347,19 +382,40 @@ h2{margin:0;font-family:var(--font-ui);font-weight:700;font-size:18px;letter-spa
   function range(n){ var a=[]; for(var i=0;i<n;i++) a.push(i); return a; }
   function shuffle(a){ for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
   function mkPlayer(){ return {pts:0, passes:2, tiers:[0,0,0], cleaned:0, stuck:0, passed:0}; }
+  /* deck log: what this phone has played, keyed by question text */
+  function logGet(){
+    try{ var L = JSON.parse(localStorage.getItem(LOGKEY)); if(L && typeof L==="object") return L; }catch(e){}
+    return {};
+  }
+  function logBump(text, field, d){
+    var L = logGet();
+    var e = L[text] || (L[text] = {seen:0, real:0, clean:0, still:0, pass:0});
+    e[field] = Math.max(0, (e[field]||0) + d);
+    var d0 = new Date();
+    e.last = d0.getFullYear()+"-"+("0"+(d0.getMonth()+1)).slice(-2)+"-"+("0"+d0.getDate()).slice(-2);
+    try{ localStorage.setItem(LOGKEY, JSON.stringify(L)); }catch(err){}
+  }
+  /* shuffled, then least-played last, so pop() deals cards this phone hasn't seen first */
+  function orderDeck(tier){
+    var L = logGet();
+    function seen(i){ var e = L[BANK[tier][i]]; return e ? (e.seen||0) : 0; }
+    return shuffle(range(BANK[tier].length)).sort(function(a,b){ return seen(b)-seen(a); });
+  }
   function fresh(names,total){
     return {
       screen:"turn", names:names, total:total, round:1,
       answerer: Math.random()<0.5 ? 0 : 1,
       phase:"pick", tier:null, q:null,
-      decks:{1:shuffle(range(BANK[1].length)), 2:shuffle(range(BANK[2].length)), 3:shuffle(range(BANK[3].length))},
+      decks:{1:orderDeck(1), 2:orderDeck(2), 3:orderDeck(3)},
       players:[mkPlayer(), mkPlayer()],
       prev:null
     };
   }
   function draw(tier){
-    if(!state.decks[tier].length) state.decks[tier] = shuffle(range(BANK[tier].length));
-    return state.decks[tier].pop();
+    if(!state.decks[tier].length) state.decks[tier] = orderDeck(tier);
+    var i = state.decks[tier].pop();
+    if(i >= BANK[tier].length) i = Math.floor(Math.random()*BANK[tier].length);
+    return i;
   }
   function clone(o){ return JSON.parse(JSON.stringify(o)); }
   function snapshotPrev(){ var c = clone(state); c.prev = null; state.prev = c; }
@@ -379,12 +435,17 @@ h2{margin:0;font-family:var(--font-ui);font-weight:700;font-size:18px;letter-spa
   /* actions */
   function pickTier(t){
     if(state.phase!=="pick") return;
-    state.tier = t; state.q = draw(t); state.phase = "ask"; render();
+    state.tier = t; state.q = draw(t); state.phase = "ask";
+    logBump(BANK[t][state.q], "seen", 1);
+    render();
   }
   function rule(kind){
     var a = state.players[state.answerer], k = state.players[1-state.answerer], t = state.tier;
     snapshotPrev();
     if(kind==="bs"){ state.phase="called"; render(); return; }
+    var text = BANK[t][state.q];
+    logBump(text, kind, 1);
+    state.prev.undoLog = {text:text, field:kind};
     if(kind==="pass"){
       if(a.passes<=0) return;
       a.passes--; a.passed++;
@@ -402,13 +463,18 @@ h2{margin:0;font-family:var(--font-ui);font-weight:700;font-size:18px;letter-spa
   }
   function undo(){
     if(!state || !state.prev) return;
-    state = state.prev; state.prev = null; render();
+    var u = state.prev.undoLog;
+    if(u) logBump(u.text, u.field, -1);
+    state = state.prev; state.prev = null; delete state.undoLog; render();
   }
   function reset(){ state = null; quitArmed = null; render(); }
 
   /* render */
   function render(){
     var screen = state ? state.screen : "start";
+    if(location.hash==="#log") screen = "log";
+    $("#screen-log").hidden = screen!=="log";
+    if(screen==="log") renderLog();
     $("#screen-start").hidden = screen!=="start";
     $("#screen-turn").hidden = screen!=="turn";
     $("#screen-end").hidden = screen!=="end";
@@ -459,6 +525,36 @@ h2{margin:0;font-family:var(--font-ui);font-weight:700;font-size:18px;letter-spa
     q.textContent = quitArmed ? "Tap again to quit" : "Quit";
     q.classList.toggle("warn", !!quitArmed);
   }
+  function renderLog(){
+    var L = logGet(), html = "", played = 0, total = 0;
+    [1,2,3].forEach(function(t){
+      var rows = [], unplayed = 0;
+      BANK[t].forEach(function(q){
+        total++;
+        var e = L[q];
+        if(!e || !e.seen){ unplayed++; return; }
+        played++;
+        rows.push({q:q, e:e, called:(e.clean||0)+(e.still||0)});
+      });
+      rows.sort(function(a,b){ return (b.called-a.called) || ((b.e.pass||0)-(a.e.pass||0)) || (b.e.seen-a.e.seen); });
+      html += '<div class="log-tier t'+t+'"><h2>'+TIER_NAME[t]+' <span>'+rows.length+' of '+BANK[t].length+' played</span></h2>';
+      if(!rows.length) html += '<p class="note">Nothing from this pile yet.</p>';
+      rows.forEach(function(r){
+        var e = r.e, bits = ['Drawn '+e.seen];
+        if(e.real) bits.push('Real '+e.real);
+        if(r.called) bits.push('<b>Called '+r.called+'</b>'+(e.still ? ' ('+e.still+' stayed slippery)' : ''));
+        if(e.pass) bits.push('<b>Passed '+e.pass+'</b>');
+        html += '<div class="log-row"><p>'+esc(r.q)+'</p><small>'+bits.join(' · ')+(e.last ? ' · last '+esc(e.last) : '')+'</small></div>';
+      });
+      if(unplayed && rows.length) html += '<p class="note">'+unplayed+' not drawn yet. Those come up first next game.</p>';
+      html += '</div>';
+    });
+    $("#logSummary").textContent = played+" of "+total+" cards played on this phone.";
+    $("#logBody").innerHTML = html;
+    var c = $("#btnClearLog");
+    c.textContent = clearArmed ? "Tap again to clear" : "Clear log";
+    c.classList.toggle("warn", !!clearArmed);
+  }
   function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
   function renderEnd(){
     var p = state.players, n = state.names;
@@ -504,6 +600,21 @@ h2{margin:0;font-family:var(--font-ui);font-weight:700;font-size:18px;letter-spa
       if(quitArmed){ clearTimeout(quitArmed); reset(); return; }
       quitArmed = setTimeout(function(){ quitArmed = null; render(); }, 2500);
       render();
+    });
+    window.addEventListener("hashchange", render);
+    $("#btnLogBack").addEventListener("click", function(){
+      history.replaceState(null, "", location.pathname + location.search); render();
+    });
+    $("#btnClearLog").addEventListener("click", function(){
+      if(clearArmed){ clearTimeout(clearArmed); clearArmed = null; try{ localStorage.removeItem(LOGKEY); }catch(e){} render(); return; }
+      clearArmed = setTimeout(function(){ clearArmed = null; render(); }, 2500);
+      render();
+    });
+    var taps = 0, tapTimer = null;
+    $("#logDoor").addEventListener("click", function(){
+      taps++; clearTimeout(tapTimer);
+      if(taps>=3){ taps = 0; location.hash = "log"; return; }
+      tapTimer = setTimeout(function(){ taps = 0; }, 600);
     });
     $("#btnAgain").addEventListener("click", function(){
       var names = state ? state.names : null;

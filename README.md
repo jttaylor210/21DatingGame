@@ -4,24 +4,27 @@ Twenty-one questions. You pick how deep you go. They decide whether to believe y
 
 One phone, face-up on the table. The phone is only the deck and the scoreboard.
 
-**Play:** https://jttaylor210.github.io/21DatingGame/
+**Play:** https://21.iamjttaylor.com
 
 ## How it's hosted
 
-GitHub Pages serves the `gh-pages` branch of this repo. It is one static page: `index.html`, a manifest, a service worker and icons. No build step. Push to `gh-pages` and the site updates in about a minute.
+GitHub Pages serves the `gh-pages` branch of this repo at the domain in `CNAME`. It is one static page: `index.html`, a manifest, a service worker and icons. No build step. Push to `gh-pages` and the site updates in about a minute.
 
-## Move it to 21.iamjttaylor.com
+DNS: a `CNAME` record for host `21` pointing to `jttaylor210.github.io`.
 
-1. DNS, wherever iamjttaylor.com is managed: add a `CNAME` record, host `21`, value `jttaylor210.github.io`.
-2. This repo → Settings → Pages → Custom domain: `21.iamjttaylor.com` → Save.
-3. When the certificate is issued (minutes to an hour), tick *Enforce HTTPS* on the same page.
+## The deck
 
-Do step 1 first. Setting the custom domain before the DNS record exists takes the site offline until it does.
+56 questions live in `BANK` near the top of the script in `index.html`: 21 Surface, 20 Under, 15 Core.
+Edit, commit, push. Then:
 
-## Edit the deck
+- copy `index.html` over `404.html` (they are the same file), and
+- bump `VERSION` in `sw.js` so phones that installed the app pick the change up on their next open.
 
-All 45 questions live in `BANK` near the top of the script in `index.html`, 15 per tier.
-Edit, commit, push. Bump `VERSION` in `sw.js` so phones that installed the app pick the change up on their next open.
+## The deck log
+
+Each phone remembers which cards it has dealt and how they were ruled, so a new game deals the cards that phone hasn't seen first. To read the log, tap the "21" in the title three times, or open the site with `#log` on the end of the address. It lists every played card with how often it was drawn, ruled real, called, or passed, most-called first. It is stored on the phone only.
+
+Changing a question's wording starts its history over.
 
 ## Install on a phone
 
