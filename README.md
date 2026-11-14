@@ -14,8 +14,9 @@ DNS: a `CNAME` record for host `21` pointing to `jttaylor210.github.io`.
 
 ## The deck
 
-56 questions live in `BANK` near the top of the script in `index.html`: 21 Surface, 20 Under, 15 Core.
-Edit, commit, push. Then:
+101 questions live in `BANK` near the top of the script in `index.html`: 36 Surface, 35 Under, 30 Core.
+
+To add a new set, append the questions to the end of each tier's list and add that tier's old length to `CUTS` just below `BANK`. The newest set is dealt first; older cards come back once the new ones have been played. Then:
 
 - copy `index.html` over `404.html` (they are the same file), and
 - bump `VERSION` in `sw.js` so phones that installed the app pick the change up on their next open.

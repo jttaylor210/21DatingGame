@@ -329,7 +329,23 @@ h2{margin:0;font-family:var(--font-ui);font-weight:700;font-size:18px;letter-spa
       "What did you search for recently that you'd rather not explain?",
       "What would your friends say you're insufferable about?",
       "What's the dumbest way you've ever hurt yourself?",
-      "What are you terrible at but keep doing with total confidence?"
+      "What are you terrible at but keep doing with total confidence?",
+      /* set 3, 2026-11-13 */
+      "What's on your phone that you'd move before handing it to me?",
+      "What's something under twenty dollars that changed your daily life?",
+      "What's the first thing you do when you get home and nobody's there?",
+      "What do you order when you're eating alone and nobody will ever know?",
+      "What do you always say you'll start next month?",
+      "What's a word or phrase you overuse and can't stop?",
+      "What does everyone seem to love that you just don't get?",
+      "What's the deepest rabbit hole you've gone down, and how long were you in there?",
+      "What were you like at sixteen, in three words? Would the two of you get along?",
+      "What's the worst advice you've ever confidently given?",
+      "What talent are you convinced you'd have if you'd just tried?",
+      "What's the most out-of-character thing you own?",
+      "What do you do in the car when you're alone?",
+      "What's a small win from this week that you haven't told anyone?",
+      "Which famous person are you in an entirely one-sided feud with?"
     ],
     2: [
       "What's something people assume about you that's wrong, and why do you let them?",
@@ -351,7 +367,23 @@ h2{margin:0;font-family:var(--font-ui);font-weight:700;font-size:18px;letter-spa
       "What did you rehearse saying before tonight?",
       "What have you pretended to be into for someone you liked?",
       "What's the most embarrassing thing you've done to impress someone? Did it work?",
-      "What's a grudge you're still holding that you know is ridiculous?"
+      "What's a grudge you're still holding that you know is ridiculous?",
+      /* set 3, 2026-11-13 */
+      "What's the nicest thing you do mostly so people will see you doing it?",
+      "What do you judge people for that you also do?",
+      "What's the last thing you were jealous of?",
+      "What's a text you typed out and never sent?",
+      "What do you pretend not to care about?",
+      "When did you last say \"I'm fine\" and not mean it?",
+      "What's the most childish thing about you that you have no plans to fix?",
+      "What's your tell when you're lying? Don't lie.",
+      "What did you think about me in the first five minutes that you've since revised?",
+      "What did you quit that you tell people you \"moved on from\"?",
+      "What do you spend money on to feel like a certain kind of person?",
+      "What's a compliment you don't believe when you get it?",
+      "Who are you a worse person around?",
+      "What's an apology you're still waiting for?",
+      "What's the most dramatic thing you've done over something small?"
     ],
     3: [
       "What's the pattern in your past relationships that's actually about you?",
@@ -368,9 +400,29 @@ h2{margin:0;font-family:var(--font-ui);font-weight:700;font-size:18px;letter-spa
       "When did you last cry, and what was it really about?",
       "What would someone who's dated you say your blind spot is?",
       "What does being loved badly look like? From experience.",
-      "What are you still trying to prove, and to whom?"
+      "What are you still trying to prove, and to whom?",
+      /* set 2, 2026-11-13 */
+      "What's the story you tell about yourself that you suspect isn't true anymore?",
+      "What do you do to people when you feel unlovable?",
+      "When did you last choose being right over being close?",
+      "What's the kindest thing someone did for you that you never repaid?",
+      "What would you have to give up to get the life you say you want?",
+      "What's a promise to yourself that you keep breaking?",
+      "Who knows you best, and what do they know that I don't?",
+      "What are you most afraid is ordinary about you?",
+      "What do you want to be forgiven for?",
+      "What part of you do you hide longest from someone new?",
+      "When were you loneliest while not alone?",
+      "When have you stayed too long, and what kept you there?",
+      "What do you envy in other people's relationships?",
+      "What's something true about you that you'd deny if I guessed it?",
+      "Which question are you hoping I don't draw?"
     ]
   };
+  /* Where each later set starts in a tier's list. Append new questions to the end of a tier
+     and add its old length here; the newest set is dealt first. */
+  var CUTS = {1:[15,21], 2:[15,20], 3:[15]};
+  function setOf(tier,i){ var n = 0; CUTS[tier].forEach(function(c){ if(i>=c) n++; }); return n; }
   var TIER_NAME = {1:"Surface",2:"Under",3:"Core"};
   var KEY = "nb21-state-v1";
   var LOGKEY = "nb21-log-v1";
@@ -395,11 +447,11 @@ h2{margin:0;font-family:var(--font-ui);font-weight:700;font-size:18px;letter-spa
     e.last = d0.getFullYear()+"-"+("0"+(d0.getMonth()+1)).slice(-2)+"-"+("0"+d0.getDate()).slice(-2);
     try{ localStorage.setItem(LOGKEY, JSON.stringify(L)); }catch(err){}
   }
-  /* shuffled, then least-played last, so pop() deals cards this phone hasn't seen first */
+  /* shuffled, then least-played and newest last, so pop() deals unseen cards first, newest set before older ones */
   function orderDeck(tier){
     var L = logGet();
     function seen(i){ var e = L[BANK[tier][i]]; return e ? (e.seen||0) : 0; }
-    return shuffle(range(BANK[tier].length)).sort(function(a,b){ return seen(b)-seen(a); });
+    return shuffle(range(BANK[tier].length)).sort(function(a,b){ return (seen(b)-seen(a)) || (setOf(tier,a)-setOf(tier,b)); });
   }
   function fresh(names,total){
     return {
